@@ -1,0 +1,19 @@
+1.7 - Display an appropriate error message if email mismatch /// done
+1.7 - Add "accept read terms in the Registration form" /// done
+1.9 - The add new user problem in Admin is still not fixed. /// done
+1.9.1 - Add a rudimentary birthdate and personal_ad to usr_cust4 /// done
+- Install the Django Debug toolbar
+
+1.9.2 Email confirmation branch /// done
+- Improve the table names for profiles and users tables, by using db_table= in models /// done
+- My project doesn't have an email activation. Add it. /// done
+    - put email_verification to true after confirmation /// done
+    - redirect properly to appropriate confirmation message after email verification sent /// done, it's better to create a registration message
+    - redirect properly to appropriate confirmation message after email confirmation /// done
+    - Show flash messages after each action /// done
+    - Test registration with real email. /// done
+
+- Prevent registration if user is already logged in /// done
+
+- 1.9.3 Implement the Country/Region/City in the profile
+    
