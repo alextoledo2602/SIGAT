@@ -1,0 +1,18 @@
+{
+    "SECRET KEY": "goup",
+    "GOOGLE_API_SECRETS": {
+        "javascript_origins": [
+            "https://www.meetero.com",
+            "https://meetero.com",
+            "http://localhost:8000",
+            "http:127.0.0.1"]},
+    "FIREBASE_SECRETS": {
+        "service_account_file_name": "your_service_account_file_name.json",
+        "user_email": "alextoledo2602@gmail.com",
+        "user_password": "ZORZANO.04"
+    },
+    "STRIP_API_SECRETS":{
+        "key": "value"
+    },
+    "VAPID_PRIVATE_KEY": "qBr7hUhjjdakusdb626bisd987asbdasiu4hpW4ubm3"
+}
