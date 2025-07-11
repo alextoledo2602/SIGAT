@@ -1,0 +1,35 @@
+[33mcommit 297ff77cd0d3036f1a30822410b5923cc94da137[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m)[m
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Fri May 28 22:40:22 2021 -0400
+
+    v1.6
+
+[33mcommit 291bce3cb577a98619dc7d7f5a43702c4ad26423[m
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Wed May 26 23:56:43 2021 -0400
+
+    v1.5 Added email as username
+
+[33mcommit 2b6be5d8fc4fb24980f2158d0e1ec67841b6ee40[m
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Tue May 25 23:37:13 2021 -0400
+
+    v1.4 After adding user registration
+
+[33mcommit 69e1a8b48cd553c3f3aa238978d73897c794ef05[m
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Sun May 23 20:11:18 2021 -0400
+
+    v1.3 Before User Registration
+
+[33mcommit a7c98b68acee345588a6371393f303a83d39bc2f[m
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Thu May 20 02:38:03 2021 -0400
+
+    v1.2 After Migrations
+
+[33mcommit da137697ae17fbcb732ee84c528c77b39a08377e[m
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Thu May 20 01:40:06 2021 -0400
+
+    v1.1

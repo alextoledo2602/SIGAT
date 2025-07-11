@@ -1,0 +1,17 @@
+•  You have installed the Firebase CLI (version 13.0.0 or a compatible version) globally using npm install -g firebase-tools@13.0.0.
+•  You have logged in to your Firebase account using firebase login.
+•  You have confirmed that firebase --version returns the correct version.
+
+•  Where to run firebase init: This is a crucial point. You are correct to question whether it should be in the Django project root.
+  •  For this testing setup with emulators, running firebase init in the Django project root is acceptable (and simplifies the setup), because we are focusing on local development with emulators only.
+  •  Important: For a real production deployment, you would typically have a separate directory structure for your Firebase project (including Cloud Functions) and your Django project.
+  •  Since you already ran firebase init in the Django project root, we'll proceed with that assumption for now. But keep in mind the different production deployment scenario.
+
+Run the command
+
+firebase-init 
+
+in the django project root. Then
+
+ firebase emulators:start
+

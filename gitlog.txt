@@ -1,0 +1,125 @@
+commit d97c451ecf118ea36f25960ba65e041151facb51
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Thu Sep 30 00:23:55 2021 -0400
+
+    v1.9.9.3 Second integration of countries, Ajax with Vanilla JS
+
+commit 4e0dd015d9453760cb19b3a75574a4160f06211a
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Sat Sep 25 23:19:05 2021 -0400
+
+    v1.9.9.2 First integration of country/region/cities drop-down list
+
+commit b71f515ab5e2887789128fdaaabc4547fd6f5e63
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Mon Sep 6 02:23:12 2021 -0400
+
+    v1.9.9.1 First translation implementation
+
+commit 78a0710ed0d29359c58a4084af7eadf1756e8714
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Sun Sep 5 23:15:18 2021 -0400
+
+    v1.9.8 Rosetta implemented and branch accepted
+
+commit 9f0ee0a6da59999cf98be2cd2ed1bea84eca8577
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Wed Sep 1 22:37:08 2021 -0400
+
+    Project resetore after system change
+
+commit 00f39765b7f19e5519232028a690c843d3ed1c35
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Sat Aug 14 20:45:02 2021 -0400
+
+    v1.9.6 Added geolocation
+
+commit 8e4f60bf59ab19122e7ae55a25f75ee14c7acc07
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Sun Aug 8 23:33:36 2021 -0400
+
+    v1.9.5 - Added the countries-states-cities autocomplete and load the js from a separate module
+
+commit 8797db9593a9f56aa07ffbd999102727dae4926b
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Sun Aug 8 23:00:21 2021 -0400
+
+    v1.9.4 - Added the countries-states-cities autocomplete
+
+commit 6cde29d0075f915c4808a942d9bf8d35ee6c35f7
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Fri Jun 25 23:41:33 2021 -0400
+
+    v 1.9.3 - Added registration confirm email and improved table names for profiles and users
+
+commit 1f79359cf59db98956db6463e820abf70af39f39
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Fri Jun 25 00:40:16 2021 -0400
+
+    v1.9.2 Nothing really new
+
+commit 822b9bd579cbad1f2b96ee3f574ed159f049c5f9
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Mon Jun 21 23:31:50 2021 -0400
+
+    v1.9.1 - Added the basic profile with the post_save signal
+
+commit f4710fc5c1f3807cfb52504fbe34464cae3b4f92
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Tue Jun 8 00:14:44 2021 -0400
+
+    v1.9 Fixed the Admin Problem and ready to get further!
+
+commit ce7889ff2e73152f65aa7ec1789070ad95ec44aa
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Sat Jun 5 01:58:51 2021 -0400
+
+    v1.8 - Undoing last changes - You must extend AbstractBaseUser and not AbstractUser to avoid predefined fields in the UserModel
+
+commit 9101c4ff28ccef1a5b9505f855aaa379cb1c85a2
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Fri Jun 4 00:05:32 2021 -0400
+
+    v1.7.1 - removed first and last name from User
+
+commit 6594d8aeabedac2d0761b53e7e99bb66345d0905
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Thu Jun 3 00:55:36 2021 -0400
+
+    v1.7 Added re-type email and read terms checkbox
+
+commit 297ff77cd0d3036f1a30822410b5923cc94da137
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Fri May 28 22:40:22 2021 -0400
+
+    v1.6
+
+commit 291bce3cb577a98619dc7d7f5a43702c4ad26423
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Wed May 26 23:56:43 2021 -0400
+
+    v1.5 Added email as username
+
+commit 2b6be5d8fc4fb24980f2158d0e1ec67841b6ee40
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Tue May 25 23:37:13 2021 -0400
+
+    v1.4 After adding user registration
+
+commit 69e1a8b48cd553c3f3aa238978d73897c794ef05
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Sun May 23 20:11:18 2021 -0400
+
+    v1.3 Before User Registration
+
+commit a7c98b68acee345588a6371393f303a83d39bc2f
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Thu May 20 02:38:03 2021 -0400
+
+    v1.2 After Migrations
+
+commit da137697ae17fbcb732ee84c528c77b39a08377e
+Author: Danilo Renzi <ionecum@gmail.com>
+Date:   Thu May 20 01:40:06 2021 -0400
+
+    v1.1

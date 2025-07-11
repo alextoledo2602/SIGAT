@@ -1,0 +1,22 @@
+Esta es la carpeta que contiene el proyecto que actualmente todavía está en desarrollo, por tanto todavía faltan algunos módulos 
+y características por implementar.
+Dentro de la carpeta myproj están todos los archivos principales del sitio, así como los estilos y demás. 
+En la carpeta users se encuentran los templates, el archivo models con los modelos y el archivo view con 
+todas las vistas que se han ido implementando. 
+Para correr el sitio en localhost se debe abrir la consola de comandos de Windows y primero se crear las migraciones 
+una vez nos hayamos asegurado de que la base de datos que se va a utilizar esté creada y su configuración en el archivo 
+settings sea la correcta, para esto se utiliza la línea: python manage.py makemigrations y seguido: python manage.py migrate.
+Luego se debe crear un superusuario mediante la línea: python manage.py createsuperuser.
+Una vez hecho todo esto se accederá al navegador y solamente será necesario escribir en la barra de navegación: localhost:8000 
+El archivo con el nombre inventario contiene la base de datos que se está utilizando durante esta etapa. Primero se debe crear la base
+de datos con el nombre de la misma y luego restaurarla. Se recomienda utilizar pgAdmin4 (Gestor de PostgreSQL).
+
+Dependencias:
+PostgreSQL 17
+Python 3.12 o superior
+Django 5.0 o superior
+Django Rossetta
+openpyxl 3.0
+reportlab 3.6
+psycopg2-binary 2.9
+djangorestframework 3.12
