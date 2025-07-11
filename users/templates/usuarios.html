@@ -1,0 +1,255 @@
+<!-- usuarios.html -->
+{% extends 'section_base.html' %}
+{% block section_content %}
+<div class="user-management">
+    <h2>Gestión de Usuarios</h2>
+    
+    <!-- Formulario de creación -->
+    <form id="userForm" class="custom-form">
+        {% csrf_token %}
+        <input type="hidden" id="userId" name="userId">
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="firstName">Nombre</label>
+                <input type="text" id="firstName" name="first_name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="lastName">Apellidos</label>
+                <input type="text" id="lastName" name="last_name" class="form-control" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="email">Carnet de Identidad</label>
+            <input type="text" id="id" name="id" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Usuario</label>
+            <input type="text" id="username" name="username" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Contraseña</label>
+            <input type="password" id="password" name="password" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Confirmar contraseña</label>
+            <input type="password" id="confirmPassword" name="password" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+            <label for="role">Rol</label>
+            <select id="role" name="role" class="form-select" required>
+                <option value="">Seleccionar...</option>
+                <option value="superadmin">Super Admin</option>
+                <option value="admin">Admin</option>
+                <option value="invitado">Invitado</option>
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-save">Guardar</button>
+        </div>
+    </form>
+
+    <!-- Tabla de usuarios -->
+    <table id="usersTable" class="custom-table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Los datos se cargarán via JavaScript -->
+        </tbody>
+    </table>
+</div>
+<style>
+.user-management {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.custom-form {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    flex: 1;
+}
+
+.form-control, .form-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.custom-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.custom-table th, .custom-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.custom-table th {
+    background-color: #f8f9fa;
+}
+
+.btn-save {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-edit, .btn-delete {
+    padding: 5px 10px;
+    margin-right: 5px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.btn-edit {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+}
+
+.btn-delete {
+    background-color: #f44336;
+    color: white;
+    border: none;
+}
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const userForm = document.getElementById('userForm');
+    const usersTable = document.getElementById('usersTable').querySelector('tbody');
+
+    // Cargar usuarios al iniciar
+    fetchUsers();
+
+    // Manejar envío del formulario
+    document.getElementById('userForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    // Validar que las contraseñas coincidan
+    if (password !== confirmPassword) {
+        alert('Las contraseñas no coinciden');
+        return; // Detiene el envío del formulario
+    }
+
+    const formData = new FormData(this);
+    const userId = document.getElementById('userId').value;
+    const url = userId ? `/api/users/${userId}/` : '/api/users/';
+    const method = userId ? 'PUT' : 'POST';
+
+    // Datos para enviar al servidor (incluye password pero omite confirmPassword)
+    const jsonData = {
+        id: formData.get("id"),
+        username: formData.get('username'),
+        first_name: formData.get('first_name'),
+        last_name: formData.get('last_name'),
+        email: formData.get('email'),
+        role: formData.get('role'),
+        password: password  // Envía solo la contraseña (no confirmPassword)
+    };
+
+    fetch(url, {
+        method: method,
+        body: JSON.stringify(jsonData),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        fetchUsers();
+        this.reset();
+    })
+    .catch(error => console.error("Error:", error));
+    });
+
+    // Cargar usuarios desde la API
+    function fetchUsers() {
+        fetch('/api/users/')
+            .then(response => response.json())
+            .then(data => {
+                usersTable.innerHTML = '';
+                data.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.first_name} ${user.last_name}</td>
+                        <td>${user.email}</td>
+                        <td>${user.role}</td>
+                        <td>
+                            <button class="btn-edit" onclick="editUser(${user.id})">Editar</button>
+                            <button class="btn-delete" onclick="deleteUser(${user.id})">Eliminar</button>
+                        </td>
+                    `;
+                    usersTable.appendChild(row);
+                });
+            });
+    }
+
+    // Editar usuario
+    window.editUser = function(id) {
+        fetch(`/api/users/${id}/`)
+            .then(response => response.json())
+            .then(user => {
+                document.getElementById('userId').value = user.id;
+                document.getElementById('firstName').value = user.first_name;
+                document.getElementById('lastName').value = user.last_name;
+                document.getElementById('email').value = user.email;
+                document.getElementById('role').value = user.role;
+            });
+    };
+
+    // Eliminar usuario
+    window.deleteUser = function(id) {
+        if (confirm('¿Eliminar este usuario?')) {
+            fetch(`/api/users/${id}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(() => fetchUsers());
+        }
+    };
+});
+</script>
+{% endblock %}

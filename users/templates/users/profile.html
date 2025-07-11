@@ -1,0 +1,29 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="profile-container">
+    <h1>Perfil de {{ user.name|escape }}</h1>
+    <p>Bienvenido a tu perfil</p>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function(){
+        {% if user.is_authenticated %}
+            fetch("/send-profile-visit-notification/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({
+                    username: "{{ user.username|escapejs }}"
+                })
+            })
+            .then(response => response.json())
+            .catch(error => console.error("Error:", error));
+        {% endif %}
+    });
+</script>
+{% endblock %}

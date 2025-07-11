@@ -1,0 +1,697 @@
+{% extends 'section_base.html' %}
+{% load static %}
+
+
+{% block section_content %}
+<div class="maintenance-container">
+    <div class="maintenance-header">
+        <h1 class="maintenance-title">Gestión de Mantenimientos</h1>
+        <button id="addMaintenanceBtn" class="btn-add-maintenance">
+            <i class="fas fa-plus"></i> Nuevo Mantenimiento
+        </button>
+    </div>
+    <div class="table-container">
+        <table class="maintenance-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                        <th class="long-text">Descripción</th> <!-- Aplica clase para celdas largas -->
+                        <th>Fecha Programada</th>
+                        <th>Responsable</th>
+                        <th>Dispositivos</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+            <tbody>
+                {% for mantenimiento in mantenimientos %}
+                <tr>
+                    <td>{{ mantenimiento.id }}</td>
+                    <td>{{ mantenimiento.get_tipo_display }}</td>
+                    <td>
+                        <span class="status-badge status-{{ mantenimiento.estado }}">
+                            {{ mantenimiento.get_estado_display }}
+                        </span>
+                    </td>
+                    <td>{{ mantenimiento.descripcion|truncatechars:100 }}</td>
+                    <td>{{ mantenimiento.fecha_programada|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        {% if mantenimiento.realizado_por %}
+                            {{ mantenimiento.realizado_por.username }}
+                        {% else %}
+                            Sin asignar
+                        {% endif %}
+                    </td>
+                    <td>{{ mantenimiento.dispositivos.count }}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-action btn-view" data-id="{{ mantenimiento.id }}">
+                                <i class="fas fa-eye"></i> Ver
+                            </button>
+                            <button class="btn-action btn-edit" data-id="{{ mantenimiento.id }}">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            <button class="btn-action btn-delete" data-id="{{ mantenimiento.id }}">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" style="text-align: center;">No hay mantenimientos registrados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal para agregar/editar mantenimiento -->
+<div id="maintenanceModal" class="modal-maintenance">
+    <div class="modal-maintenance-content">
+        <div class="modal-maintenance-header">
+            <h2 class="modal-maintenance-title" id="modalTitle">Nuevo Mantenimiento</h2>
+            <span class="close-modal">&times;</span>
+        </div>
+        
+        <form id="maintenanceForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" id="maintenanceId" name="maintenance_id" value="">
+            
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="tipo">Tipo de Mantenimiento</label>
+                        <select class="form-control" id="tipo" name="tipo" required>
+                            <option value="">Seleccione un tipo</option>
+                            <option value="preventivo">Preventivo</option>
+                            <option value="correctivo">Correctivo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="estado">Estado</label>
+                        <select class="form-control" id="estado" name="estado" required>
+                            <option value="programado">Programado</option>
+                            <option value="en_proceso">En Proceso</option>
+                            <option value="completado">Completado</option>
+                            <option value="cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="fecha_programada">Fecha Programada</label>
+                        <input type="datetime-local" class="form-control" id="fecha_programada" name="fecha_programada" required>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="fecha_inicio">Fecha de Inicio (opcional)</label>
+                        <input type="datetime-local" class="form-control" id="fecha_inicio" name="fecha_inicio">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="fecha_fin">Fecha de Finalización (opcional)</label>
+                        <input type="datetime-local" class="form-control" id="fecha_fin" name="fecha_fin">
+                    </div>
+                </div>
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="realizado_por">Responsable</label>
+                        <select class="form-control" id="realizado_por" name="realizado_por">
+                            <option value="">Seleccione un responsable</option>
+                            {% for usuario in usuarios %}
+                            <option value="{{ usuario.id }}">{{ usuario.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="devices-selection">
+                <h3>Dispositivos a Mantenimiento</h3>
+                <div class="devices-list">
+                    {% for dispositivo in dispositivos %}
+                    <div class="device-checkbox">
+                        <input type="checkbox" id="device_{{ dispositivo.id }}" name="dispositivos" value="{{ dispositivo.id }}">
+                        <label for="device_{{ dispositivo.id }}">
+                            {{ dispositivo.marca }} {{ dispositivo.modelo }} ({{ dispositivo.numero_inventario }})
+                        </label>
+                    </div>
+                    {% empty %}
+                    <p>No hay dispositivos registrados</p>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="modal-maintenance-footer">
+                <button type="button" class="btn-cancel">Cancelar</button>
+                <button type="submit" class="btn-save">Guardar Mantenimiento</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para confirmar eliminación -->
+<div id="deleteModal" class="modal-maintenance">
+    <div class="modal-maintenance-content" style="max-width: 500px;">
+        <div class="modal-maintenance-header">
+            <h2 class="modal-maintenance-title">Confirmar Eliminación</h2>
+            <span class="close-modal">&times;</span>
+        </div>
+        
+        <p>¿Está seguro que desea eliminar este mantenimiento? Esta acción no se puede deshacer.</p>
+        
+        <div class="modal-maintenance-footer">
+            <button type="button" class="btn-cancel">Cancelar</button>
+            <button type="button" id="confirmDeleteBtn" class="btn-save" style="background-color: #F44336;">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Estilos específicos para mantenimiento */
+    .table-container {
+        width: 100%;
+        overflow-x: auto;
+        margin-bottom: 20px;
+        border: 1px solid #eee;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .maintenance-container {
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .maintenance-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .maintenance-title {
+        font-size: 1.5rem;
+        color: #333;
+    }
+    
+    .btn-add-maintenance {
+        background-color: #18ac20;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .btn-add-maintenance:hover {
+        background-color: #1B5E20;
+    }
+    
+    .maintenance-table {
+        width: 100%;
+        min-width: 800px;
+        border-collapse: collapse;
+        white-space: nowrap;
+    }
+    
+    .maintenance-table th {
+        background-color: #f5f5f5;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+    }
+    
+    .maintenance-table td {
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+        /* Barra de scroll personalizada */
+    .table-container::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .table-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+
+    .table-container::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    .maintenance-table td.long-text {
+        white-space: normal; 
+        max-width: 300px;
+    }
+
+    .maintenance-table tr:hover {
+        background-color: #f9f9f9;
+    }
+    
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .status-programado {
+        background-color: #FFF3E0;
+        color: #E65100;
+    }
+    
+    .status-en_proceso {
+        background-color: #E3F2FD;
+        color: #0D47A1;
+    }
+    
+    .status-completado {
+        background-color: #E8F5E9;
+        color: #2E7D32;
+    }
+    
+    .status-cancelado {
+        background-color: #FFEBEE;
+        color: #C62828;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .btn-action {
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .btn-edit {
+        background-color: #2196F3;
+        color: white;
+    }
+    
+    .btn-edit:hover {
+        background-color: #0D47A1;
+    }
+    
+    .btn-delete {
+        background-color: #F44336;
+        color: white;
+    }
+    
+    .btn-delete:hover {
+        background-color: #C62828;
+    }
+    
+    .btn-view {
+        background-color: #4CAF50;
+        color: white;
+    }
+    
+    .btn-view:hover {
+        background-color: #2E7D32;
+    }
+    
+    /* Modal styles */
+    .modal-maintenance {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        overflow: auto;
+    }
+    
+    .modal-maintenance-content {
+        background-color: #fff;
+        margin: 5% auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 800px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        overflow-y: auto;
+    }
+    
+    .modal-maintenance-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .modal-maintenance-title {
+        font-size: 1.3rem;
+        color: #333;
+    }
+    
+    .close-modal {
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #777;
+    }
+    
+    .close-modal:hover {
+        color: #333;
+    }
+    
+    .form-container {
+        display: flex;
+        flex-direction: column;
+        min-height: 70vh;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    
+    .form-control:focus {
+        border-color: #2E7D32;
+        outline: none;
+    }
+    
+    .form-row {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .form-col {
+        flex: 1;
+    }
+    
+    .devices-selection {
+        flex-grow: 1;
+        overflow-y: auto;
+        margin-top: 20px;
+        border: 1px solid #eee;
+        padding: 15px;
+        border-radius: 4px;
+    }
+    
+    .devices-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 10px;
+        max-height: 50vh;
+        overflow-y: auto;
+        padding: 5px;
+    }
+
+    .device-checkbox {
+        margin-bottom: 8px;
+    }
+    
+    .modal-maintenance-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #eee;
+    }
+    
+    .btn-save {
+        background-color: #2E7D32;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-save:hover {
+        background-color: #1B5E20;
+    }
+    
+    .btn-cancel {
+        background-color: #f5f5f5;
+        color: #333;
+        padding: 8px 16px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        cursor: pointer;
+    }
+    
+    .btn-cancel:hover {
+        background-color: #e0e0e0;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .maintenance-table {
+            display: block;
+            overflow-x: auto;
+        }
+        
+        .form-row {
+            flex-direction: column;
+        }
+        
+        .modal-maintenance-content {
+            margin: 10% auto;
+            width: 95%;
+        }
+    }
+</style>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables para modales
+    const maintenanceModal = document.getElementById('maintenanceModal');
+    const deleteModal = document.getElementById('deleteModal');
+    const addMaintenanceBtn = document.getElementById('addMaintenanceBtn');
+    const closeModalBtns = document.querySelectorAll('.close-modal, .btn-cancel');
+    const maintenanceForm = document.getElementById('maintenanceForm');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    
+    let currentMaintenanceId = null;
+    
+    // Abrir modal para agregar nuevo mantenimiento
+    addMaintenanceBtn.addEventListener('click', function() {
+        document.getElementById('modalTitle').textContent = 'Nuevo Mantenimiento';
+        document.getElementById('maintenanceId').value = '';
+        maintenanceForm.reset();
+        maintenanceModal.style.display = 'block';
+    });
+    
+    // Abrir modal para editar mantenimiento
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const maintenanceId = this.getAttribute('data-id');
+            currentMaintenanceId = maintenanceId;
+            
+            // Aquí deberías hacer una petición AJAX para obtener los datos del mantenimiento
+            // Por ahora simularemos datos
+            fetch(`/api/mantenimientos/${maintenanceId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('modalTitle').textContent = 'Editar Mantenimiento';
+                    document.getElementById('maintenanceId').value = data.id;
+                    document.getElementById('tipo').value = data.tipo;
+                    document.getElementById('estado').value = data.estado;
+                    document.getElementById('descripcion').value = data.descripcion;
+                    document.getElementById('fecha_programada').value = formatDateTimeForInput(data.fecha_programada);
+                    
+                    if(data.fecha_inicio) {
+                        document.getElementById('fecha_inicio').value = formatDateTimeForInput(data.fecha_inicio);
+                    }
+                    
+                    if(data.fecha_fin) {
+                        document.getElementById('fecha_fin').value = formatDateTimeForInput(data.fecha_fin);
+                    }
+                    
+                    if(data.realizado_por) {
+                        document.getElementById('realizado_por').value = data.realizado_por.id;
+                    }
+                    
+                    // Marcar dispositivos asociados
+                    document.querySelectorAll('input[name="dispositivos"]').forEach(checkbox => {
+                        checkbox.checked = data.dispositivos.includes(parseInt(checkbox.value));
+                    });
+                    
+                    maintenanceModal.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al cargar los datos del mantenimiento');
+                });
+        });
+    });
+    
+    // Función auxiliar para formatear fechas
+    function formatDateTimeForInput(dateTimeStr) {
+        if (!dateTimeStr) return '';
+        const date = new Date(dateTimeStr);
+        const isoString = date.toISOString();
+        return isoString.substring(0, 16); // Formato YYYY-MM-DDTHH:MM
+    }
+    
+    // Abrir modal para ver mantenimiento (similar a editar pero en modo lectura)
+    document.querySelectorAll('.btn-view').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const maintenanceId = this.getAttribute('data-id');
+            // Implementar lógica similar a editar pero con campos deshabilitados
+            alert(`Ver mantenimiento ${maintenanceId}`);
+        });
+    });
+    
+    // Abrir modal para confirmar eliminación
+    document.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentMaintenanceId = this.getAttribute('data-id');
+            deleteModal.style.display = 'block';
+        });
+    });
+    
+    // Confirmar eliminación
+    confirmDeleteBtn.addEventListener('click', function() {
+        if (currentMaintenanceId) {
+            // Enviar petición AJAX para eliminar
+            fetch(`/api/mantenimientos/${currentMaintenanceId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Error al eliminar el mantenimiento');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al eliminar el mantenimiento');
+            });
+        }
+        deleteModal.style.display = 'none';
+    });
+    
+    // Cerrar modales
+    closeModalBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            maintenanceModal.style.display = 'none';
+            deleteModal.style.display = 'none';
+        });
+    });
+    
+    // Cerrar modal al hacer clic fuera del contenido
+    window.addEventListener('click', function(event) {
+        if (event.target === maintenanceModal) {
+            maintenanceModal.style.display = 'none';
+        }
+        if (event.target === deleteModal) {
+            deleteModal.style.display = 'none';
+        }
+    });
+    
+    // Enviar formulario de mantenimiento
+    maintenanceForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(maintenanceForm);
+        const maintenanceId = formData.get('maintenance_id');
+        const url = maintenanceId ? `/api/mantenimientos/${maintenanceId}/` : '/api/mantenimientos/';
+        const method = maintenanceId ? 'PUT' : 'POST';
+        
+        // Convertir FormData a objeto JSON
+        const jsonData = {};
+        formData.forEach((value, key) => {
+            // Manejar arrays (dispositivos seleccionados)
+            if (key === 'dispositivos') {
+                if (!jsonData[key]) jsonData[key] = [];
+                jsonData[key].push(value);
+            } else {
+                jsonData[key] = value;
+            }
+        });
+        
+        fetch(url, {
+            method: method,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jsonData)
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                return response.json().then(err => {
+                    throw new Error(err.message || 'Error al guardar el mantenimiento');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(error.message);
+        });
+    });
+});
+</script>
+{% endblock %}

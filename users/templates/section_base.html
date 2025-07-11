@@ -1,0 +1,342 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'styles/dashboard.css' %}">
+<style>
+    /* Estilos para el menú desplegable del usuario */
+    .user-avatar-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    .user-dropdown {
+        display: none;
+        position: absolute;
+        right: 0;
+        background-color: #fff;
+        min-width: 200px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        border-radius: 4px;
+        z-index: 1000;
+        margin-top: 5px;
+    }
+
+    .user-dropdown.show {
+        display: block;
+    }
+
+    .dropdown-item {
+        padding: 10px 15px;
+        display: block;
+        color: #333;
+        text-decoration: none;
+        transition: background-color 0.3s;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f5f5f5;
+    }
+
+    .dropdown-item i {
+        margin-right: 10px;
+        width: 20px;
+        text-align: center;
+    }
+
+    /* Estilos para el modal de confirmación */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+        background-color: #fff;
+        margin: 15% auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .modal h3 {
+        margin-top: 0;
+        color: #333;
+    }
+
+    .modal p {
+        margin-bottom: 20px;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .btn-confirm {
+        background-color: #d32f2f;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .btn-confirm:hover {
+        background-color: #b71c1c;
+    }
+
+    .btn-cancel {
+        background-color: #f5f5f5;
+        color: #333;
+        border: 1px solid #ddd;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .btn-cancel:hover {
+        background-color: #e0e0e0;
+    }
+    .logo-sigat-container{
+        display: flex;
+        align-items: center;
+        justify-content: center; /* Centra horizontalmente */
+        padding: 20px 0; /* Espaciado vertical */
+        margin-top: auto; /* Lo empuja hacia abajo */
+        text-align: center;
+        border-top: 1px solid #eee; /* Opcional: línea separadora */
+    }
+    .logo-sigat-img{
+        width: auto;
+        height: 60px;
+    }
+    .dashboard-nav{
+        width: 300px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <header class="dashboard-header">
+        <button class="mobile-menu-toggle" id="menuToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <div class="logo-container">
+            <img src="{% static 'images/logo-institucion.png' %}" alt="Logo" class="logo-img" />
+        </div>
+        
+        <div class="user-info">
+            <div class="user-details">
+                <div class="user-name">{{ user.get_full_name }}</div>
+                <div class="user-role">
+                    {% if user.role == 'superadmin' %}
+                        Super Administrador
+                    {% elif user.role == 'admin' %}
+                        Administrador
+                    {% else %}
+                        Invitado
+                    {% endif %}
+                </div>
+            </div>
+            <div class="user-avatar-container">
+                <div class="user-avatar" id="userAvatar">
+                    {{ user.first_name|first }}{{ user.last_name|first }}
+                </div>
+                <div class="user-dropdown" id="userDropdown">
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'password_change' %}" class="dropdown-item">
+                        <i class="fas fa-lock"></i> Cambiar contraseña
+                    </a>
+                    <a href="#" class="dropdown-item" id="logoutButton">
+                        <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+                    </a>
+                    {% else %}
+                    <a href="{% url 'login' %}" class="dropdown-item">
+                        <i class="fas fa-sign-in-alt"></i> Iniciar sesión
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- Menu de navegación -->
+    <nav class="dashboard-nav" id="dashboardNav">
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a href="{% url 'home' %}" class="nav-link">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Home</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'inventario' %}" class="nav-link active">
+                    <i class="fas fa-boxes"></i>
+                    <span>Inventario</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'usuarios' %}" class="nav-link">
+                    <i class="fas fa-users"></i>
+                    <span>Usuarios</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'mantenimiento' %}" class="nav-link">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>Mantenimiento</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'reports_backups' %}" class="nav-link" data-nav="reports_backups">
+                    <i class="fas fa-cog"></i>
+                    <span>Reportes y Backup</span>
+                </a>
+            </li>
+
+            <li class="nav-item-logo">
+                <div class="logo-sigat-container">
+                    <img src="{% static 'images/sigat2-transparent.png' %}" alt="Logo SIGAT" class="logo-sigat-img" />
+                </div>
+            </li>
+        </ul>
+    </nav>
+    <!-- Modal de confirmación para cerrar sesión -->
+    <div class="modal" id="logoutModal">
+        <div class="modal-content">
+            <h3>Confirmar cierre de sesión</h3>
+            <p>¿Estás seguro que deseas cerrar tu sesión?</p>
+            <div class="modal-actions">
+                <button id="confirmLogout" class="btn-confirm">Sí, cerrar sesión</button>
+                <button id="cancelLogout" class="btn-cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <main class="dashboard-main">
+        <div class="scrollable-container">
+            {% block section_content %}{% endblock %}
+        </div>
+    </main>
+</div>
+
+<!-- SDK Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-messaging.js"></script>
+
+<!-- Configuración segura Django-JS -->
+<script id="auth-config">
+    window.authData = {
+        isAuthenticated: {% if user.is_authenticated %}true{% else %} false{% endif %}
+    };
+</script>
+
+<!-- Scripts combinados -->
+<script>
+    // Menú móvil
+    document.getElementById('menuToggle').addEventListener('click', function () {
+        document.getElementById('dashboardNav').classList.toggle('active');
+    });
+
+    // Menú desplegable del usuario
+    document.getElementById('userAvatar').addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById('userDropdown').classList.toggle('show');
+    });
+
+    // Cerrar menús al hacer clic fuera
+    window.addEventListener('click', function(e) {
+        // Cerrar menú desplegable
+        const dropdown = document.getElementById('userDropdown');
+        if (dropdown.classList.contains('show') && !e.target.closest('.user-avatar-container')) {
+            dropdown.classList.remove('show');
+        }
+        
+        // Cerrar modal
+        if (e.target === document.getElementById('logoutModal')) {
+            document.getElementById('logoutModal').style.display = 'none';
+        }
+    });
+
+    // Mostrar modal de confirmación
+    document.getElementById('logoutButton').addEventListener('click', function(e) {
+        e.preventDefault();
+        document.getElementById('logoutModal').style.display = 'block';
+        document.getElementById('userDropdown').classList.remove('show');
+    });
+
+    
+    // Confirmar cierre de sesión
+    document.getElementById('confirmLogout').addEventListener('click', function() {
+        // Crear un formulario oculto para enviar la solicitud POST
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{% url 'login' %}";
+    
+        // Agregar token CSRF
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = "{{ csrf_token }}";
+        form.appendChild(csrfInput);
+    
+        document.body.appendChild(form);
+        form.submit();
+    });
+
+    // Cancelar cierre de sesión
+    document.getElementById('cancelLogout').addEventListener('click', function() {
+        document.getElementById('logoutModal').style.display = 'none';
+    });
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Obtener la ruta actual de forma más precisa
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('.nav-link');
+    
+    // Primero, remover todas las clases active
+    navLinks.forEach(link => link.classList.remove('active'));
+    
+    // Lógica mejorada de comparación
+    navLinks.forEach(link => {
+        const linkPath = new URL(link.href).pathname;
+        
+        // Caso especial para home
+        if (linkPath === '/' && currentPath === '/') {
+            link.classList.add('active');
+            return;
+        }
+        
+        // Para otras rutas
+        if (linkPath !== '/' && currentPath.startsWith(linkPath)) {
+            link.classList.add('active');
+        }
+    });
+    
+    // Respaldar con datos de Django si están disponibles
+    {% if active_tab %}
+        const activeTab = "{{ active_tab }}";
+        document.querySelector(`.nav-link[data-nav="${activeTab}"]`).classList.add('active');
+    {% endif %}
+});
+</script>
+
+<!-- Firebase Init -->
+<script src="{% static 'js/firebase-init.js' %}"></script>
+{% endblock %}

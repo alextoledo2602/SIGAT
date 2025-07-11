@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+     <head>
+          <title>Push Notifications</title>
+     
+     <!-- <script src="{% static 'js/firebase-messaging-sw.js' %}"></script> -->
+     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+     
+     <script src="{% static 'js/firebase-config.js' %}"></script>
+  
+</head>
+<body>
+     <h1>Enable Push Notifications</h1>
+
+     <button id="enableNotifications">Enable Notifications</button>
+
+     
+     <script>
+
+
+// Initialize Firebase COMPACT
+const app = firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
+
+// Initialize Firebase MODULAR
+// const app = initializeApp(firebaseConfig);
+// const messaging = getMessaging(app);
+
+  // Escuchar mensajes en primer plano
+  messaging.onMessage((payload) => {
+            console.log('Mensaje recibido:', payload);
+        });
+
+
+      document.getElementById('enableNotifications').addEventListener('click', async () => {
+        try {
+    // 1. Registrar el service worker
+          const registration = await navigator.serviceWorker.register("/static/js/firebase-messaging-sw.js");
+            // 2. Obtener el token
+    const token = await firebase.messaging().getToken({
+      // BCzShZRk0gk1ou1MW2P3tkfRMDE40_sMjH2XDygZxMJZi5clc5SYYDFrOPlkVVXIopKdvczbhf99ImiDBJh6f2M
+      vapidKey: 'BO8jUMl9_AR0SmG8U_IlOhMdg8PMD52EDM_9qV8m-Azfu4QaeBqOl1YpQ6EreElgYq0zpTYNUy3V6G07eHyN5Bo',
+      serviceWorkerRegistration: registration
+    });
+
+    console.log('Token:', token);
+  } catch (err) {
+    console.error('Error:', err);
+  }
+});
+
+  </script>
+
+</body>
+</html>

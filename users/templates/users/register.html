@@ -1,0 +1,19 @@
+<!-- users/templates/users/register.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Register</h2> 
+
+<form method="post">
+    {% csrf_token %}
+    {# {{ email1 }}<br>{{ email2 }}<br> #}
+    <ul class="customForm">
+        {{ form.as_ul }}
+        <input type="submit" value="Register">
+    </ul>
+
+    
+</form>
+
+<a href="{% url 'login' %}">Back to login</a>
+{% endblock %}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: letter;
+            margin: 1cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+        }
+        h1 {
+            color: #2E7D32;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th {
+            background-color: #2E7D32;
+            color: white;
+            padding: 8px;
+            text-align: left;
+        }
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reporte de Inventario</h1>
+    <p>Generado el: {% now "DATETIME_FORMAT" %}</p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>N° Inventario</th>
+                <th>Tipo</th>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th>Serial</th>
+                <th>Ubicación</th>
+                <th>Estado</th>
+                <th>Responsable</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dispositivo in dispositivos %}
+            <tr>
+                <td>{{ dispositivo.numero_inventario }}</td>
+                <td>{{ dispositivo.get_tipo_display }}</td>
+                <td>{{ dispositivo.marca }}</td>
+                <td>{{ dispositivo.modelo }}</td>
+                <td>{{ dispositivo.serial }}</td>
+                <td>{{ dispositivo.ubicacion }}</td>
+                <td>{{ dispositivo.estado }}</td>
+                <td>{{ dispositivo.responsable }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <p style="margin-top: 20px; text-align: right;">
+        Total de dispositivos: {{ dispositivos|length }}
+    </p>
+</body>
+</html>

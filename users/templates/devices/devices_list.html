@@ -1,0 +1,130 @@
+<div class="devices-list">
+    <h3>Listado de Dispositivos</h3>
+    <a href="{% url 'agregar_dispositivo' %}" class="btn-add">Agregar Nuevo</a>
+    
+    <table class="devices-table">
+        <thead>
+            <tr>
+                <th>N° Inventario</th>
+                <th>Tipo</th>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th>Serial</th>
+                <th>Ubicación</th>
+                <th>Estado</th>
+                <th>Responsable</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dispositivo in dispositivos %}
+            <tr>
+                <td>{{ dispositivo.numero_inventario }}</td>
+                <td>{{ dispositivo.get_tipo_display }}</td>
+                <td>{{ dispositivo.get_marca_display }}</td>
+                <td>{{ dispositivo.modelo }}</td>
+                <td>{{ dispositivo.serial }}</td>
+                <td>{{ dispositivo.get_ubicacion_display }}</td>
+                <td>
+                    <span class="status-badge {{ dispositivo.estado|lower|cut:' ' }}">
+                        {{ dispositivo.get_estado_display }}
+                    </span>
+                </td>
+                <td>{{ dispositivo.responsable }}</td>
+                <td>
+                    <a href="#" class="btn-edit">Editar</a>
+                    <a href="#" class="btn-delete">Eliminar</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9" class="no-devices">No hay dispositivos registrados</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .devices-list {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    
+    .btn-add {
+        display: inline-block;
+        margin-bottom: 15px;
+        padding: 8px 15px;
+        background-color: #4CAF50;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+    }
+    
+    .devices-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .devices-table th, 
+    .devices-table td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .devices-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .status-badge.activo {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-badge.enreparación {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-badge.baja {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .btn-edit, .btn-delete {
+        padding: 4px 8px;
+        margin-right: 5px;
+        text-decoration: none;
+        border-radius: 3px;
+        font-size: 13px;
+    }
+    
+    .btn-edit {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-delete {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .no-devices {
+        text-align: center;
+        padding: 20px;
+        color: #6c757d;
+    }
+</style>

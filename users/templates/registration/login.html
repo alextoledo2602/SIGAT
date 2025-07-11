@@ -1,0 +1,37 @@
+<!-- users/templates/registration/login.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'styles/auth.css' %}?v={% now 'U' %}">
+{% endblock %}
+
+{% block body_class %}login-page{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <h2>Iniciar sesión</h2>
+    
+    {% if form.errors %}
+    <div class="alert-error">
+        Usuario o contraseña incorrectos.
+    </div>
+    {% endif %}
+    
+    <form method="post" class="login-form">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="id_username">Usuario:</label>
+            <input type="text" name="username" id="id_username" required autofocus>
+        </div>
+        
+        <div class="form-group">
+            <label for="id_password">Contraseña:</label>
+            <input type="password" name="password" id="id_password" required>
+        </div>
+        
+        <button type="submit" class="btn-login">Ingresar</button>
+    </form>
+</div>
+{% endblock %}
