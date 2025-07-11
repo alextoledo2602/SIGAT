@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+{% block content %}
+    <form class="" action="" method="post">
+        {% csrf_token %}
+        {% for error in errors %}
+            <div class="alert alert-danger mb-4" role="alert">
+                <b>{{ error }}</b>
+            </div>
+        {% endfor %}
+        current {{ lang }}
+        <div class ="row">
+            <div class="col-lg-6">
+                <div class="mb-4">
+                    {{ form.country }}
+                </div>
+            </div>
+            
+        </div>
+        <div class="row" id="divProvinces">
+            <br><br>
+            <div class="col-lg-6">
+                <div class="mb-4">
+                    <div class="form-group">
+                        <label>{% trans "Select a Province/State" %}</label>
+                        <select id="id_province" class="form-control" name="state">
+                            <option value="----">{% trans "-- Select Province/State --" %}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row" id="divCities">
+            <br><br>
+            <div class="col-lg-6">
+                <div class="mb-4">
+                    <div class="form-group">
+                        <label>{% trans "Select a City" %}</label>
+                        <select id="id_city" class="form-control" name="state">
+                            <option value="----">{% trans "-- Select City --" %}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    <!-- hay que ver exactamente cuál es la consulta correcta que retorna la lista de los estados, porque en la version vanilla siempre recibo una lista vacia. -->
+    {% include 'vanilla/base_jquery.html' %} 
+{% endblock %}

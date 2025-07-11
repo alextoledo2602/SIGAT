@@ -1,0 +1,92 @@
+{% load i18n %}
+{% load static %}
+
+<script>
+    /* This function retrieve the csrf token from the cookies */
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    /* This function just sorts the list of regions or cities */
+        function sortList(dataList){
+        return dataList.sort(function(a, b){
+            if (a[1] < b[1]) return -1;
+            if (a[1] > b[1]) return 1;
+            return 0;
+        });
+    }
+
+    /**
+    Creates a XmlReq request and send it. 
+    @param function func_name - it's the function in the server that will be called asynchronously. 
+    @param string token - it's the csrf token necessary to validate django forms. 
+    @param data json object - it's the data to send to the server
+    @param callback callback - it's the callback function to be called on success. 
+    **/
+    function createXmlReq(func_name, token, data, callback){
+        var xhr = new XMLHttpRequest();
+        xhr.addEventListener("load", callback);
+        xhr.open("POST", func_name);
+        xhr.setRequestHeader("X-CSRFToken", token);
+        /* The following two setRequestHeaders are not mandatory, the code works without them. */
+        xhr.setRequestHeader("Accept", "application/json");
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.send(JSON.stringify(data));
+    }
+
+    document.getElementById("divProvinces").style.display="none";
+    document.getElementById("divCities").style.display="none";
+    
+    /* Fetch the regions by the country when a country is selected from the drop-down list */
+    document.getElementById("id_country").onchange = function(){
+        var country_name = this.value;
+        var token = getCookie('csrftoken');
+        /* if country changes reset city list, no need to hide id_province because it will change anyway */
+        document.getElementById("id_city").innerHTML = "";
+        document.getElementById("divCities").style.display="none";
+        var data = {'country': country_name};
+        var xhr = createXmlReq("get-province", token, data, transferCompleteProvinces);
+
+        function transferCompleteProvinces(event){
+            data = JSON.parse(event.srcElement.response);
+            data.provinces = sortList(data.provinces);
+            let html_data = '';
+            if (data.provinces.length !== 0) {
+                html_data = '<option value="-----">{% trans "-- Select State --" %}</option>';
+                data.provinces.forEach(function(data){
+                    html_data += `<option value="${data[0]}">${data[1]}</option>`
+                });
+            }else{
+                html_data = '<option value="-----">{% trans "No states available for this country" %}</option>';
+            }
+            document.getElementById("divProvinces").style.display="block";
+            document.getElementById("id_province").innerHTML=html_data
+        }
+    }
+
+    /* Fetch the cities by the region when a region is selected from the drop-down list */
+    document.getElementById("id_province").onchange = function(){
+        var province_name = this.value;
+        var token = getCookie('csrftoken');
+        var data = {'province': province_name};
+        var xhr = createXmlReq("get-cities", token, data, transferCompleteCities);
+        
+        function transferCompleteCities(event){
+            data = JSON.parse(event.srcElement.response);
+            data.cities = sortList(data.cities);
+            let html_data = '';
+            if (data.cities.length !== 0) {
+                html_data = '<option value="-----">{% trans "-- Select City --" %}</option>';
+                data.cities.forEach(function(data){
+                    html_data += `<option value="${data[0]}">${data[1]}</option>`
+                });
+            }else{
+                html_data = '<option value="-----">{% trans "No cities available for this region" %}</option>';
+            }
+            document.getElementById("divCities").style.display="block";
+            document.getElementById("id_city").innerHTML=html_data;
+        }
+    }
+</script>

@@ -1,0 +1,68 @@
+{% load static %}
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{% trans "Vanilla Javascript Cities Test" %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
+</head>
+<body id="body">
+<!-- To see raw result enter a query like
+    http://127.0.0.1:8000/cities/?cityname=Madrid
+    in the browser. -->
+Location {{ ip_geoloc }}<br><br>
+
+    <div class="title has-text-centered" id="main"></div>
+    <section id="form" class="section" onclick="clearCities()">
+        <div class="container">
+            <h1 class="title">{% trans "Vanilla Cities Javascript" %}</h1>
+            <!-- Row for City, State and Country -->
+            <div id="location">
+                <div class="field">
+                    <div class="control">
+                        <div id="cities-dropdown" class="dropdown">
+                            <div class="dropdown-trigger">
+                                <input name="cities" id="cities" onkeyup="getCities()" maxlength="50" class="input" type="text" placeholder="Enter a city" aria-haspopup="true" aria-controls="dropdown-menu3" list="cities" -autocomplete="off" required 
+                                >
+                            </div>
+                            <!--datalist id="cities" class="dropdown-menu">
+                                <div class="dropdown-menu" id="dropdown-menu3" role="menu">
+                                    <div id="cities-dropdown-content" class="dropdown-content">
+                                            <option class="dropdown-item" tabindex="-1"></option>
+                                    </div>
+                                </div>
+                            </datalist-->
+                            <div class="dropdown-menu" id="dropdown-menu3" role="list">
+                                <div id="cities-dropdown-content" class="dropdown-content">
+                                    <a class="dropdown-item"></a>
+                                </div>
+                            </div>
+                            </div>&nbsp;<a href="#" id="clear">{% trans "Clear" %}</a>
+                        </div>
+                        &nbsp;<span class="is-size-7 has-text-info">{% trans "(If your location doesn't appear immediately, try to type slower)." %}</span>
+                </div>
+                
+                <!-- City Field -->
+                <div class="field">
+                    <div class="control">
+                        <input name="city" id="city" class="input" type="text" placeholder="City" required>
+                    </div>
+                </div>
+                <!-- State Field -->
+                <div class="field">
+                    <div class="control">
+                        <input name="state" id="state" class="input" type="text" placeholder="State" required>
+                    </div>
+                </div>
+                <!-- Country Field -->
+                <div class="field">
+                    <div class="control">
+                        <input name="country" id="country" class="input" type="text" placeholder="Country" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+<script  src="{% static 'js/countries.js' %}"></script>
