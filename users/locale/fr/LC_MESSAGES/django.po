@@ -1,0 +1,105 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-09-29 23:14-0400\n"
+"PO-Revision-Date: 2021-09-05 23:09+0000\n"
+"Last-Translator:   <ionecum@gmail.com>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Translated-Using: django-rosetta 0.9.7\n"
+
+#: .\users\forms.py:29
+msgid "Re-Type Email"
+msgstr "Écrivez encore votre email"
+
+#: .\users\forms.py:38
+msgid "I accept the "
+msgstr "J'accepte les "
+
+#: .\users\forms.py:38
+msgid "terms"
+msgstr "termes"
+
+#: .\users\forms.py:47
+msgid "Email and Re-Type email must be the same."
+msgstr "Les champs Email et Écrire encore votre email doivent être les mêmes"
+
+#: .\users\forms.py:57
+msgid "You must accept the terms and conditions."
+msgstr "Vous devez accepter les termes et conditions"
+
+#: .\users\models.py:21
+msgid "The Email must be set"
+msgstr "L'email doit être inséré"
+
+#: .\users\models.py:23
+msgid "Users must have a Username"
+msgstr "L'utilisateur doit avoir un nom d'utilisateur"
+
+#: .\users\models.py:53
+msgid "email address"
+msgstr ""
+
+#: .\users\templates\base.html:7
+msgid "My App"
+msgstr ""
+
+#: .\users\templates\base.html:18
+msgid "Welcome to Awesome Website"
+msgstr "Bienvenue au site incroyable"
+
+#: .\users\templates\home_page.html:4
+msgid "Welcome to the Home Page!"
+msgstr "Bienvenue à la page d'accueil!"
+
+#: .\users\views.py:38
+msgid "Your email has been confirmed."
+msgstr ""
+
+#: .\users\views.py:44
+msgid ""
+"Error: The confirmation link was invalid, possibly because it has already "
+"been used."
+msgstr ""
+
+#: .\users\views.py:63
+msgid "To register a new user you must first log out"
+msgstr ""
+
+#: .\users\views.py:78
+msgid "Activate Your Acccount"
+msgstr ""
+
+#: .\users\views.py:87
+msgid "Please Confirm your email to complete registration."
+msgstr ""
+
+#: .\users\views.py:132
+msgid "Your response has been submited successfully"
+msgstr ""
+
+#~ msgid "English"
+#~ msgstr "Anglais"
+
+#~ msgid "French"
+#~ msgstr "Français"
+
+#~ msgid "Spanish"
+#~ msgstr "Espagnol"
+
+#~ msgid "Portuguese"
+#~ msgstr "Portugais"
+
+#~ msgid "I accept the <a href='terms.html'>terms</a>"
+#~ msgstr "J'accepte les  <a href='terms.html'>conditions</a> d'utilisation"

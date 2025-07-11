@@ -1,0 +1,89 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-09-25 22:20-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: .\users\forms.py:29
+msgid "Re-Type Email"
+msgstr ""
+
+#: .\users\forms.py:38
+msgid "I accept the "
+msgstr ""
+
+#: .\users\forms.py:38
+msgid "terms"
+msgstr ""
+
+#: .\users\forms.py:47
+msgid "Email and Re-Type email must be the same."
+msgstr ""
+
+#: .\users\forms.py:57
+msgid "You must accept the terms and conditions."
+msgstr ""
+
+#: .\users\models.py:21
+msgid "The Email must be set"
+msgstr ""
+
+#: .\users\models.py:23
+msgid "Users must have a Username"
+msgstr ""
+
+#: .\users\models.py:53
+msgid "email address"
+msgstr ""
+
+#: .\users\templates\base.html:7
+msgid "My App"
+msgstr ""
+
+#: .\users\templates\base.html:18
+msgid "Welcome to Awesome Website"
+msgstr ""
+
+#: .\users\templates\home_page.html:4
+msgid "Welcome to the Home Page!"
+msgstr ""
+
+#: .\users\views.py:38
+msgid "Your email has been confirmed."
+msgstr ""
+
+#: .\users\views.py:44
+msgid ""
+"Error: The confirmation link was invalid, possibly because it has already "
+"been used."
+msgstr ""
+
+#: .\users\views.py:63
+msgid "To register a new user you must first log out"
+msgstr ""
+
+#: .\users\views.py:78
+msgid "Activate Your Acccount"
+msgstr ""
+
+#: .\users\views.py:87
+msgid "Please Confirm your email to complete registration."
+msgstr ""
+
+#: .\users\views.py:132
+msgid "Your response has been submited successfully"
+msgstr ""
