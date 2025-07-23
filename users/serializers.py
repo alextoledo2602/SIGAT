@@ -5,44 +5,38 @@ from rest_framework import serializers
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import Group
 
-
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True)
     role = serializers.ChoiceField(choices=User.ROLES)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'role', 'password', 'groups']
+        fields = ['id', 'username', 'email', 'role', 'password', 'first_name', 'last_name']
         extra_kwargs = {
-            'password': {'write_only': True},
+            'id': {'required': True, 'read_only': False},
+            'email': {'required': True},
+            'username': {'required': True}
         }
 
     def create(self, validated_data):
-        # Extract role and groups from validated_data
-        role = validated_data.pop('role', "invitado")
-        #password = validated_data.pop('password', None)
-        groups_data = validated_data.pop('groups', [])
-
-        # Create user instance without password and groups
-        user = User.objects.create_user(role=role,**validated_data)
-        # Extract role and groups from validated_data
+        # Extraer campos necesarios
+        password = validated_data.pop('password')
+        role = validated_data.pop('role', 'invitado')
         
-    
-    # Asignación directa de grupos
-        if role == 'superadmin':
-            group = Group.objects.get(name='Superadministradores')
-            user.groups.add(group)
-            user.is_superuser = True
-            user.is_staff = True
-        elif role == 'admin':
-            group = Group.objects.get(name='Administradores')
-            user.groups.add(group)
-            user.is_staff = True
-    
-        user.save()
+        # Crear usuario usando el CustomUserManager
+        user = User.objects.create_user(
+            id=validated_data['id'],
+            email=validated_data['email'],
+            username=validated_data['username'],
+            password=password,
+            role=role,
+            **{k: v for k, v in validated_data.items() if k in ['first_name', 'last_name']}
+        )
         return user
 
-from .models import DispositivoInventario
+from .models import DispositivoInventario, Mantenimiento, Backup
 
 class DispositivoInventarioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -55,3 +49,14 @@ class DispositivoInventarioSerializer(serializers.ModelSerializer):
         if DispositivoInventario.objects.filter(serial=value).exists():
             raise serializers.ValidationError("Este número de serie ya está registrado")
         return value
+class BackupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Backup
+        fields = '__all__'
+
+class MantenimientoSerializer(serializers.ModelSerializer):
+    dispositivo = DispositivoInventarioSerializer(read_only=True)
+    
+    class Meta:
+        model = Mantenimiento
+        fields = '__all__'

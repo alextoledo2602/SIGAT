@@ -39,7 +39,7 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django.middleware.csrf import get_token
-from rest_framework import generics
+from rest_framework import generics, viewsets, mixins, status
 from .serializers import UserSerializer
 from django.db.models import Q
 from django.utils.dateparse import parse_date
@@ -47,45 +47,108 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
+from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework.response import Response
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import login as auth_login
+from django.contrib.auth import authenticate
+from .permissions import IsSuperAdmin, IsAdmin
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from .serializers import BackupSerializer
+
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 @method_decorator(csrf_protect, name='dispatch')
-class CustomLoginView(LoginView):
-    template_name = 'registration/login.html'  # Asegúrate de tener este template
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Fuerza la generación del token CSRF si no está presente
-        if 'csrf_token' not in context:
-            from django.middleware.csrf import get_token
-            context['csrf_token'] = get_token(self.request)
-        return context
 
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        
-        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            user = form.get_user()
-            return JsonResponse({
-                'success': True,
-                'redirect_url': self.get_success_url(),
-                'user': {
-                    'username': user.username,
-                    'email': user.email
-                }
-            })
+class CustomLoginAPIView(APIView):
+    """
+    Vista de API para el login que:
+    1. Proporciona CSRF token en GET
+    2. Maneja autenticación en POST
+    3. Envía notificaciones push al iniciar sesión
+    """
+    permission_classes = []  # Permitir acceso sin autenticación
+
+    def get(self, request):
+        """Endpoint para obtener CSRF token"""
+        response = JsonResponse({'csrfToken': get_token(request)})
+        response["Access-Control-Allow-Origin"] = request.headers.get('Origin', '*')
+        response["Access-Control-Allow-Credentials"] = 'true'
         return response
 
-    def form_invalid(self, form):
-        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'errors': form.errors.as_json(),
-                'message': 'Invalid login credentials'
-            }, status=400)
-        return super().form_invalid(form)
-    
-    def send_login_notification(self, user):
+    def post(self, request):
+        """
+        Maneja el login con:
+        - Validación CSRF
+        - Autenticación de usuario
+        - Envío de notificaciones
+        """
+        # Verificación CSRF
+        csrf_token = request.headers.get('X-CSRFToken')
+        cookie_token = request.META.get('CSRF_COOKIE')
+        
+        if not csrf_token or not cookie_token or csrf_token != cookie_token:
+            return Response({
+                'status': 'error',
+                'message': 'Token CSRF inválido'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            data = request.data
+            user = authenticate(
+                request,
+                username=data.get('username'),
+                password=data.get('password')
+            )
+            
+            if user is not None:
+            # Login exitoso
+                login(request, user)
+            
+            # Configurar respuesta con el rol del usuario
+                response = Response({
+                    'status': 'success',
+                    'user': {
+                        'username': user.username,
+                        'email': user.email,
+                        'id': user.id,
+                        'role': user.role  # Asegurarse de enviar el rol al frontend
+                    }
+                })
+            
+            # Establecer cookie con el rol del usuario
+                response.set_cookie(
+                    key='user_role',
+                    value=user.role,
+                    httponly=False,  # Para que Vue pueda leerla
+                    secure=False,    # En producción debería ser True
+                    samesite='Lax'
+                )
+            
+            # Enviar notificaciones push
+                self._send_login_notifications(user)
+            
+                return response
+            
+            return Response({
+                'status': 'error',
+                'message': 'Credenciales inválidas'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+            
+        except json.JSONDecodeError:
+            return Response({
+                'status': 'error',
+                'message': 'Formato JSON inválido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'message': f'Error en el servidor: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _send_login_notifications(self, user):
         """Envía notificaciones push sobre el inicio de sesión"""
         login_time = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
         message = {
@@ -100,40 +163,30 @@ class CustomLoginView(LoginView):
         
         # 2. Enviar notificación Web Push (para navegadores)
         self._send_web_push_notification(user, message)
-    
-    def send_fcm_notification(self, user, message):
+
+    def _send_fcm_notification(self, user, message):
         """Envía notificación a través de Firebase Cloud Messaging"""
         try:
-            # Verificar si el usuario tiene un token FCM activo
             if hasattr(user, 'fcmtoken') and user.fcmtoken.is_active:
                 push_service = FCMNotification(api_key=settings.FCM_API_KEY)
-                
-                # Enviar notificación al dispositivo
                 result = push_service.notify_single_device(
                     registration_id=user.fcmtoken.token,
                     message_title=message["title"],
                     message_body=message["body"],
                     data_message={
                         "type": "login",
-                        "timestamp": message["timestamp"]
+                        "timestamp": message["timestamp"],
+                        "url": "/dashboard/"
                     }
                 )
-                
-                # Registrar el envío en la base de datos
-                if result.get('success', 0) == 1:
-                    print(f"Notificación FCM enviada a {user.username}")
-                else:
-                    print(f"Error al enviar FCM a {user.username}: {result}")
-        
+                print(f"Notificación FCM enviada a {user.username}")
         except Exception as e:
             print(f"Error en FCM para {user.username}: {str(e)}")
-    
-    def send_web_push_notification(self, user, message):
+
+    def _send_web_push_notification(self, user, message):
         """Envía notificación Web Push a navegadores"""
         try:
-            # Obtener todos los dispositivos registrados del usuario
             devices = Devices.objects.filter(user=user)
-            
             for device in devices:
                 try:
                     webpush(
@@ -149,7 +202,7 @@ class CustomLoginView(LoginView):
                             "data": {
                                 "type": "login",
                                 "timestamp": message["timestamp"],
-                                "url": "/profile/"  # URL para redireccionar al hacer clic
+                                "url": "/dashboard/"
                             }
                         }),
                         vapid_private_key=settings.VAPID_PRIVATE_KEY,
@@ -158,44 +211,91 @@ class CustomLoginView(LoginView):
                             "aud": "https://updates.push.services.mozilla.com"
                         }
                     )
-                    print(f"Notificación WebPush enviada a {user.username}")
-                
                 except WebPushException as e:
                     print(f"Error WebPush para {user.username}: {str(e)}")
-                    # Opcional: eliminar dispositivo si el token es inválido
                     if "410" in str(e):  # Gone status
                         device.delete()
-        
         except Exception as e:
             print(f"Error general en WebPush para {user.username}: {str(e)}")
+@ensure_csrf_cookie
+def get_csrf(request):
+    response = JsonResponse({'status': 'CSRF cookie set'})
+    response["Access-Control-Allow-Origin"] = request.headers.get('Origin', '*')
+    response["Access-Control-Allow-Credentials"] = 'true'
+    return response
 
-def dashboard(request):
-    #if not request.user.profile.
-    return render(request, "users/dashboard.html")
+class DashboardDataAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        total_dispositivos = DispositivoInventario.objects.count()
+        dispositivos_activos = DispositivoInventario.objects.filter(estado="Activo").count()
+        total_usuarios = User.objects.count()
+        
+        chart_data = {
+            'labels': ['Computadoras', 'Impresoras', 'Servidores', 'Redes', 'Otros'],
+        }
+        
+        return Response({
+            'total_dispositivos': total_dispositivos,
+            'dispositivos_activos': dispositivos_activos,
+            'total_usuarios': total_usuarios,
+            'ultima_actualizacion': timezone.now().isoformat(),
+        })
+
+class UserProfileAPIView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            'username': user.username,
+            'full_name': user.get_full_name()
+        })
 
   
 
-def home_page(request):
-    total_dispositivos = DispositivoInventario.objects.count()
-    total_usuarios = User.objects.count()
-    dispositivos_activos = DispositivoInventario.objects.filter(estado="Activo").count()
-    context = {
-        'active_tab': 'home',
-        'total_dispositivos' : total_dispositivos,
-        'total_usuarios' : total_usuarios, 
-        'dispositivos_activos' : dispositivos_activos
-    }
-    return render(request, "home_page.html",  context)
+class HomeAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        total_dispositivos = DispositivoInventario.objects.count()
+        total_usuarios = User.objects.count()
+        dispositivos_activos = DispositivoInventario.objects.filter(estado="Activo").count()
+        
+        return Response({
+            'active_tab': 'home',
+            'total_dispositivos': total_dispositivos,
+            'total_usuarios': total_usuarios,
+            'dispositivos_activos': dispositivos_activos
+        })
 
 
+class DispositivoInventarioAPIView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
 
-def inventario_view(request):
-    dispositivos = DispositivoInventario.objects.all()  # Obtener todos los dispositivos
-    
-    return render(request, 'inventario.html', {
-        'dispositivos': dispositivos, 
-        'active_tab': 'inventario'
-    })
+    def get(self, request):
+        dispositivos = DispositivoInventario.objects.all()
+        serializer = DispositivoInventarioSerializer(dispositivos, many=True)
+        return Response({
+            'dispositivos': serializer.data,
+            'active_tab': 'inventario'
+        })
+
+    def post(self, request):
+        serializer = DispositivoInventarioSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(creado_por=request.user)
+            return Response({
+                'status': 'success',
+                'message': 'Dispositivo agregado correctamente',
+                'data': serializer.data
+            }, status=status.HTTP_201_CREATED)
+        return Response({
+            'status': 'error',
+            'message': 'Error en los datos',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -207,30 +307,87 @@ User = get_user_model()
 def is_superadmin_or_admin(user):
     return user.role in ['superadmin', 'admin'] or user.is_superuser
 
-@login_required
-@user_passes_test(is_superadmin_or_admin)
-def usuarios(request):
-    users = User.objects.all()
-    return render(request, 'usuarios.html', {'users': users})
 
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsSuperAdmin]  # Solo superadmin puede manejar usuarios
+    lookup_field = 'id'
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        user.sync_role_to_group()
+        # Ejemplo: Enviar email de bienvenida
+        # send_welcome_email(user)
+
+    @action(detail=True, methods=['post'])
+    def activate(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = True
+        user.save()
+        return Response({'status': 'user activated'})
+
+    @action(detail=True, methods=['post'])
+    def deactivate(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = False
+        user.save()
+        return Response({'status': 'user deactivated'})
 
 from rest_framework.permissions import IsAuthenticated
 from .models import DispositivoInventario
 from .serializers import DispositivoInventarioSerializer
 
-class DispositivoInventarioCreateView(generics.CreateAPIView):
+class DispositivoInventarioViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para el manejo completo de CRUD de dispositivos de inventario.
+    Se integra automáticamente con el router de DRF.
+    """
     queryset = DispositivoInventario.objects.all()
     serializer_class = DispositivoInventarioSerializer
     permission_classes = [IsAuthenticated]
+    filterset_fields = ['tipo', 'estado', 'ubicacion', 'responsable']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filtros personalizados
+        fecha_inicio = self.request.query_params.get('fecha_inicio')
+        fecha_fin = self.request.query_params.get('fecha_fin')
+        
+        if fecha_inicio and fecha_fin:
+            queryset = queryset.filter(
+                fecha_adquisicion__range=[fecha_inicio, fecha_fin]
+            )
+        
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(creado_por=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def reporte(self, request):
+        """
+        Endpoint especial para generar reportes en diferentes formatos.
+        Uso: /api/dispositivos/reporte/?formato=pdf|excel|json
+        """
+        dispositivos = self.filter_queryset(self.get_queryset())
+        formato = request.query_params.get('formato', 'json')
+        
+        if formato == 'pdf':
+            return generate_pdf_report(dispositivos)
+        elif formato == 'excel':
+            return generate_excel_report(dispositivos)
+        
+        serializer = self.get_serializer(dispositivos, many=True)
+        return Response(serializer.data)
 
 from django.shortcuts import render, redirect
 from django.core.exceptions import ValidationError
 
 
 @login_required
+@permission_classes([IsAdmin])
 def agregar_dispositivo(request):
     usuarios_disponibles = User.objects.all() 
     if request.method == 'POST':
@@ -298,131 +455,46 @@ def custom_logout(request):
     logout(request)
     return redirect('login')
 
-@login_required
-def reports_backups_view(request):
-    # Obtener todos los usuarios para el filtro de reportes
-    usuarios = User.objects.all()
-    
-    # Obtener backups existentes
-    backups = Backup.objects.all().order_by('-fecha_creacion')
-    
-    # Inicializar resultados de reportes
-    dispositivos_filtrados = None
-    report_filters = {}
-    
-    # Manejar generación de reportes
-    if request.method == 'POST' and 'report_type' in request.POST:
-        # Obtener parámetros del formulario
-        report_type = request.POST.get('report_type')
-        fecha_inicio = request.POST.get('fecha_inicio')
-        fecha_fin = request.POST.get('fecha_fin')
-        estado = request.POST.get('estado')
-        ubicacion = request.POST.get('ubicacion')
-        usuario_id = request.POST.get('usuario')
 
-        report_filters = {
-            'report_type': report_type,
-            'fecha_inicio': fecha_inicio,
-            'fecha_fin': fecha_fin,
-            'estado': estado,
-            'ubicacion': ubicacion,
-            'usuario_id': usuario_id,
-        }
-        request.session['report_filters'] = report_filters
+class ReportsBackupsViewSet(viewsets.ModelViewSet):
+    queryset = Backup.objects.all().order_by('-fecha_creacion')
+    serializer_class = BackupSerializer
+    permission_classes = [IsAdmin]
 
+    @action(detail=True, methods=['post'])
+    def restore(self, request, pk=None):
+        backup = self.get_object()
+        # Aquí iría la lógica de restauración real
+        return Response({
+            'status': 'success',
+            'message': f'Backup {backup.tipo} restaurado'
+        })
 
-        # Filtrar dispositivos
+    @action(detail=False, methods=['post'])
+    def generate_report(self, request):
         dispositivos = DispositivoInventario.objects.all()
         
-        # Aplicar filtros según los parámetros
-        if fecha_inicio and fecha_fin:
-            try:
-                fecha_inicio_dt = datetime.strptime(fecha_inicio, '%Y-%m-%d')
-                fecha_fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d')
-                dispositivos = dispositivos.filter(
-                    fecha_adquisicion__range=[fecha_inicio_dt, fecha_fin_dt]
-                )
-            except ValueError:
-                messages.error(request, 'Formato de fecha inválido')
+        # Aplicar filtros
+        dispositivos = self._apply_filters(dispositivos, request.data)
+        serializer = DispositivoInventarioSerializer(dispositivos, many=True)
         
-        if estado:
-            dispositivos = dispositivos.filter(estado=estado)
-        
-        if ubicacion:
-            dispositivos = dispositivos.filter(ubicacion=ubicacion)
-        
-        if usuario_id:
-            usuario = User.objects.get(id=usuario_id)
-            dispositivos = dispositivos.filter(responsable=usuario.username)
-        
-        dispositivos_filtrados = dispositivos
-    
-    elif 'report_filters' in request.session:
-        report_filters = request.session['report_filters']
-        dispositivos = DispositivoInventario.objects.all()
-        
-        if report_filters.get('fecha_inicio') and report_filters.get('fecha_fin'):
-            try:
-                fecha_inicio_dt = parse_date(report_filters['fecha_inicio'])
-                fecha_fin_dt = parse_date(report_filters['fecha_fin'])
-                if fecha_inicio_dt and fecha_fin_dt:
-                    dispositivos = dispositivos.filter(
-                        fecha_adquisicion__range=[fecha_inicio_dt, fecha_fin_dt]
-                    )
-            except (ValueError, TypeError):
-                pass
-        
-        if report_filters.get('estado'):
-            dispositivos = dispositivos.filter(estado=report_filters['estado'])
-        
-        if report_filters.get('ubicacion'):
-            dispositivos = dispositivos.filter(ubicacion=report_filters['ubicacion'])
-        
-        if report_filters.get('usuario_id'):
-            try:
-                usuario = User.objects.get(id=report_filters['usuario_id'])
-                dispositivos = dispositivos.filter(responsable=usuario.username)
-            except User.DoesNotExist:
-                pass
+        request.session['report_filters'] = request.data
+        return Response(serializer.data)
 
-        dispositivos_filtrados = dispositivos
-
-    export_format = request.GET.get('export')
-    if export_format and dispositivos_filtrados:
-        if export_format == 'pdf':
-            return generate_pdf_report(dispositivos_filtrados)
-        elif export_format == 'excel':
-            return generate_excel_report(dispositivos_filtrados)
-
-    
-    # Manejar creación de backups
-    if request.method == 'POST' and 'backup_type' in request.POST:
-        backup_type = request.POST.get('backup_type')
-        description = request.POST.get('description', '')
-        
-        try:
-            backup = Backup.objects.create(
-            tipo=backup_type,
-            descripcion=description,
-            tamaño=1024 * 1024,  # 1MB de ejemplo
-            ubicacion="/backups/real/",
-            creado_por=request.user
+    def _apply_filters(self, queryset, filters):
+        # Implementación de filtros (similar a tu versión anterior)
+        if filters.get('fecha_inicio') and filters.get('fecha_fin'):
+            queryset = queryset.filter(
+                fecha_adquisicion__range=[
+                    filters['fecha_inicio'],
+                    filters['fecha_fin']
+                ]
             )
-            messages.success(request, f'Backup {backup_type} creado exitosamente')
-            backup.save()
-            # Actualizar la lista de backups
-            backups = Backup.objects.all().none()
-        except Exception as e:
-            messages.error(request, f'Error al crear backup: {str(e)}')
-    
-    context = {
-        'usuarios': usuarios,
-        'dispositivos': dispositivos_filtrados,
-        'backups': backups,
-        'active_tab': 'reports_backups',
-        'current_filters': report_filters
-    }
-    return render(request, 'reports_backups.html', context)
+        if filters.get('estado'):
+            queryset = queryset.filter(estado=filters['estado'])
+        if filters.get('ubicacion'):
+            queryset = queryset.filter(ubicacion=filters['ubicacion'])
+        return queryset
 
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -583,87 +655,140 @@ def generate_excel_report(dispositivos):
     return response
 
 # Modificar export_report para usar filtros persistentes
-@login_required
-def export_report(request, format):
-    # Obtener filtros de la sesión
-    report_filters = request.session.get('report_filters', {})
-    
-    dispositivos = DispositivoInventario.objects.all()
-    
-    # Aplicar filtros
-    if report_filters.get('fecha_inicio') and report_filters.get('fecha_fin'):
-        try:
-            fecha_inicio_dt = parse_date(report_filters['fecha_inicio'])
-            fecha_fin_dt = parse_date(report_filters['fecha_fin'])
-            if fecha_inicio_dt and fecha_fin_dt:
-                dispositivos = dispositivos.filter(
-                    fecha_adquisicion__range=[fecha_inicio_dt, fecha_fin_dt]
-                )
-        except (ValueError, TypeError):
-            pass
-    
-    if report_filters.get('estado'):
-        dispositivos = dispositivos.filter(estado=report_filters['estado'])
-    
-    if report_filters.get('ubicacion'):
-        dispositivos = dispositivos.filter(ubicacion=report_filters['ubicacion'])
-    
-    if report_filters.get('usuario_id'):
-        try:
-            usuario = User.objects.get(id=report_filters['usuario_id'])
-            dispositivos = dispositivos.filter(responsable=usuario.username)
-        except User.DoesNotExist:
-            pass
-    
-    # Generar reporte según formato
-    if format == 'pdf':
-        return generate_pdf_report(dispositivos)
-    elif format == 'excel':
-        return generate_excel_report(dispositivos)
-    
-    return redirect('reports_backups')
+
+class ExportReportAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format):
+        report_filters = request.session.get('report_filters', {})
+        dispositivos = self._apply_filters(DispositivoInventario.objects.all(), report_filters)
+        
+        if format == 'pdf':
+            return generate_pdf_report(dispositivos)
+        elif format == 'excel':
+            return generate_excel_report(dispositivos)
+        
+        return Response({
+            'status': 'error',
+            'message': 'Formato no soportado'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    def _apply_filters(self, queryset, filters):
+        # Reutilizar el mismo método de filtrado que en ReportsBackupsAPIView
+        if filters.get('fecha_inicio') and filters.get('fecha_fin'):
+            try:
+                fecha_inicio_dt = parse_date(filters['fecha_inicio'])
+                fecha_fin_dt = parse_date(filters['fecha_fin'])
+                if fecha_inicio_dt and fecha_fin_dt:
+                    queryset = queryset.filter(
+                        fecha_adquisicion__range=[fecha_inicio_dt, fecha_fin_dt]
+                    )
+            except (ValueError, TypeError):
+                pass
+        
+        if filters.get('estado'):
+            queryset = queryset.filter(estado=filters['estado'])
+        
+        if filters.get('ubicacion'):
+            queryset = queryset.filter(ubicacion=filters['ubicacion'])
+        
+        if filters.get('usuario_id'):
+            try:
+                usuario = User.objects.get(id=filters['usuario_id'])
+                queryset = queryset.filter(responsable=usuario.username)
+            except User.DoesNotExist:
+                pass
+        
+        return queryset
 
 # Vista para descargar backup (simulada)
-@login_required
-def download_backup(request, backup_id):
-    try:
-        backup = Backup.objects.get(id=backup_id)
-        # En producción, serviríamos el archivo real
-        response = HttpResponse(content_type='application/octet-stream')
-        response['Content-Disposition'] = f'attachment; filename="backup_{backup_id}.bak"'
-        # Aquí iría el contenido real del backup
-        response.write(b"Simulated backup content")
-        return response
-    except Backup.DoesNotExist:
-        messages.error(request, 'Backup no encontrado')
-        return redirect('reports_backups')
 
+class BackupOperationsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
-# Vista para restaurar backup (simulada)
-@login_required
-def restore_backup(request, backup_id):
-    try:
-        backup = Backup.objects.get(id=backup_id)
-        # En producción, aquí se restauraría el backup real
-        messages.success(request, f'Backup #{backup_id} restaurado exitosamente')
-    except Backup.DoesNotExist:
-        messages.error(request, 'Backup no encontrado')
-    
-    return redirect('reports_backups')
+    def get(self, request, backup_id):
+        try:
+            backup = Backup.objects.get(id=backup_id)
+            response = HttpResponse(content_type='application/octet-stream')
+            response['Content-Disposition'] = f'attachment; filename="backup_{backup_id}.bak"'
+            response.write(b"Simulated backup content")
+            return response
+        except Backup.DoesNotExist:
+            return Response({
+                'status': 'error',
+                'message': 'Backup no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request, backup_id):
+        try:
+            backup = Backup.objects.get(id=backup_id)
+            return Response({
+                'status': 'success',
+                'message': f'Backup #{backup_id} restaurado exitosamente'
+            })
+        except Backup.DoesNotExist:
+            return Response({
+                'status': 'error',
+                'message': 'Backup no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
 from .models import Mantenimiento
-@login_required
-def mantenimiento_view(request):
-    mantenimientos = Mantenimiento.objects.all().prefetch_related('dispositivo')
-    dispositivos = DispositivoInventario.objects.all()
-    usuarios = User.objects.filter(is_active=True)
-    
-    return render(request, 'mantenimiento.html', {
-        'mantenimientos': mantenimientos,
-        'dispositivos': dispositivos,
-        'usuarios': usuarios,
-        'active_tab': 'mantenimiento'
-    })
+from .serializers import MantenimientoSerializer
 
+class MantenimientoViewSet(viewsets.ModelViewSet):
+    queryset = Mantenimiento.objects.all().prefetch_related('dispositivo')
+    serializer_class = MantenimientoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Filtros opcionales (ejemplo)
+        queryset = super().get_queryset()
+        dispositivo_id = self.request.query_params.get('dispositivo_id')
+        if dispositivo_id:
+            queryset = queryset.filter(dispositivo_id=dispositivo_id)
+        return queryset
+
+class FCMTokenAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            token = request.data.get('token')
+            device_name = request.data.get('device_name', 'Unknown')
+
+            if not token:
+                return Response({
+                    'success': False, 
+                    'message': 'Token is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            FCMToken.objects.update_or_create(
+                user=request.user,
+                defaults={
+                    'token': token,
+                    'is_active': True,
+                    'device_name': device_name
+                }
+            )
+
+            return Response({
+                'success': True, 
+                'message': 'Token saved successfully!'
+            })
+        except Exception as e:
+            return Response({
+                'success': False, 
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def get(self, request):
+        has_token = FCMToken.objects.filter(
+            user=request.user, 
+            is_active=True
+        ).exists()
+        
+        return Response({
+            'hasToken': has_token
+        })
 
 
 
@@ -719,59 +844,103 @@ def my_view(request):
     
 
 
-def push_notifications_view(request):
-    return render(request, 'push/push_notifications.html')
+class PushNotificationAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
-@csrf_exempt  # Disable CSRF protection for this view (for testing purposes only!)
-def send_login_notification(request):
-    if request.method == 'POST':
-        try:
-            if not request.user.is_authenticated:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Usuario no autenticado'
-                }, status=401)
-            
-            # Verificar si el usuario tiene token FCM
-            try:
-                fcm_token = FCMToken.objects.get(user=request.user, is_active=True)
-            except FCMToken.DoesNotExist:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'No hay token FCM registrado para este usuario'
-                }, status=400)
-            
-            # Configurar FCM
-            push_service = FCMNotification(api_key=settings.FCM_API_KEY)
-            
-            # Enviar notificación
-            result = push_service.notify_single_device(
-                registration_id=fcm_token.token,
-                message_title="Nuevo inicio de sesión",
-                message_body=f"Usuario {request.user.username} ha iniciado sesión",
-                data_message={
-                    "type": "login",
-                    "timestamp": str(timezone.now()),
-                    "url": "/dashboard/"
-                }
-            )
-            
-            return JsonResponse({
-                'status': 'success',
-                'result': result,
-                'message': 'Notificación enviada'
-            })
-            
-        except Exception as e:
-            return JsonResponse({
+    def post(self, request):
+        notification_type = request.data.get('type')
+        
+        if notification_type == 'login':
+            return self._handle_login_notification(request.user)
+        elif notification_type == 'profile_visit':
+            return self._handle_profile_visit(request)
+        else:
+            return Response({
                 'status': 'error',
-                'message': str(e)
-            }, status=500)
-    
-    return JsonResponse({
-        'status': 'error',
-        'message': 'Método no permitido'
-    }, status=405)
+                'message': 'Tipo de notificación no válido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    def _handle_login_notification(self, user):
+        login_time = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+        message = {
+            "title": "Nuevo inicio de sesión",
+            "body": f"El usuario {user.username} inició sesión el {login_time}",
+            "icon": "/static/images/icon.png",
+            "timestamp": login_time
+        }
+        
+        # Enviar notificaciones
+        self._send_fcm_notification(user, message)
+        self._send_web_push_notification(user, message)
+        
+        return Response({
+            'status': 'success',
+            'message': 'Notificaciones enviadas'
+        })
+
+    def _handle_profile_visit(self, request):
+        username = request.data.get("username", request.user.username)
+        visit_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        message = {
+            "title": f"Visita de perfil",
+            "body": f"{username} visitó el perfil el {visit_time}",
+            "icon": "/static/images/icon.png"
+        }
+        
+        self._send_web_push_notification(request.user, message)
+        return Response({"status": "success"})
+
+    def _send_fcm_notification(self, user, message):
+        try:
+            if hasattr(user, 'fcmtoken') and user.fcmtoken.is_active:
+                push_service = FCMNotification(api_key=settings.FCM_API_KEY)
+                result = push_service.notify_single_device(
+                    registration_id=user.fcmtoken.token,
+                    message_title=message["title"],
+                    message_body=message["body"],
+                    data_message={
+                        "type": "login",
+                        "timestamp": message["timestamp"],
+                        "url": "/dashboard/"
+                    }
+                )
+                return result
+        except Exception as e:
+            print(f"Error en FCM: {str(e)}")
+            return None
+
+    def _send_web_push_notification(self, user, message):
+        try:
+            devices = Devices.objects.filter(user=user)
+            for device in devices:
+                try:
+                    webpush(
+                        subscription_info={
+                            "endpoint": device.endpoint,
+                            "keys": {
+                                "p256dh": device.p256dh,
+                                "auth": device.auth
+                            }
+                        },
+                        data=json.dumps({
+                            "notification": message,
+                            "data": {
+                                "type": "login",
+                                "timestamp": message.get("timestamp"),
+                                "url": "/dashboard/"
+                            }
+                        }),
+                        vapid_private_key=settings.VAPID_PRIVATE_KEY,
+                        vapid_claims={
+                            "sub": f"mailto:{settings.CONTACT_EMAIL}",
+                            "aud": "https://updates.push.services.mozilla.com"
+                        }
+                    )
+                except WebPushException as e:
+                    if "410" in str(e):  # Gone status
+                        device.delete()
+        except Exception as e:
+            print(f"Error en WebPush: {str(e)}")
 def csrf_failure_view(request, reason=""):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({
@@ -868,9 +1037,17 @@ def send_profile_visit_notification(request):
         except Exception as e:
             return JsonResponse({"status": "Error", "message": str(e)}, status=400)
     return JsonResponse({"status": "Error", "message": "Invalid request method"}, status=405)
-@login_required
-def profile_view(request):
-    return render(request, "users/profile.html", {"user": request.user})
+
+class ProfileAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            'username': user.username,
+            'email': user.email,
+            'full_name': user.get_full_name()
+        })
 @login_required
 def send_login_notification(request):
     if request.method == 'POST':

@@ -23,13 +23,17 @@ def setup_groups(sender, **kwargs):
     if sender.name == 'users':  # Solo para la app 'users'
         User = sender.get_model('User')
         content_type = ContentType.objects.get_for_model(User)
+        ADMIN_PERMISSIONS = [
+            'add_user', 'change_user', 'delete_user',
+            'view_user', 'add_group', 'change_group'
+        ]
         
         # Crear grupos si no existen
         admin_group, _ = Group.objects.get_or_create(name='Administradores')
         superadmin_group, _ = Group.objects.get_or_create(name='Superadministradores')
         
         # Asignar permisos
-        all_permissions = Permission.objects.filter(content_type=content_type)
+        all_permissions = Permission.objects.filter(content_type=content_type, codename__in=ADMIN_PERMISSIONS)
         superadmin_group.permissions.set(all_permissions)
         admin_group.permissions.set(all_permissions.exclude(codename__contains='delete'))
 
@@ -37,7 +41,8 @@ def setup_groups(sender, **kwargs):
 logger = logging.getLogger(__name__)
 @receiver(user_logged_in)
 def log_user_login (sender, request, user, **kwargs):
-    logger.info(f"Usuario {user.username} ha iniciado sesion. IP: {request.META.get("REMOTE_ADDR")}")
+    ip = request.META.get("REMOTE_ADDR", "IP-no-disponible")
+    logger.info(f"Usuario {user.username} ha iniciado sesion. IP: {ip}")
 
 
 #Creacion de registros relacionados
@@ -45,7 +50,7 @@ from django.utils import timezone
 
 @receiver(post_save, sender=models.DispositivoInventario)
 def crear_registros_relacionados(sender, instance, created, **kwargs):
-    if created:
+    if created and instance.creado_por:
         # 1. Crear un reporte inicial de inventario
         models.Reporte.objects.create(
             tipo_reporte='inventario',

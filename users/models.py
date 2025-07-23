@@ -79,7 +79,7 @@ class User(AbstractUser):
     The REQUIRED_FIELDS = ['username'] must be present, otherwise the following error will arise:
         TypeError: create_superuser() missing 1 required positional argument: 'username'
     """
-    REQUIRED_FIELDS = ['id']
+    REQUIRED_FIELDS = ['id', 'email']
     objects = CustomUserManager()
 
     def getEmailField(self):
