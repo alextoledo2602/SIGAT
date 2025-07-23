@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-@9xz^m!z)j9tbv+t24aemh*l6dbwzj9=_20vx406b(2y7zlsq)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-# ALLOWED_HOSTS = ['9680aed90292.ngrok.io']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'users',
     'countries',
     'rest_framework',
+    'rest_framework.authtoken',
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -54,20 +56,57 @@ LOCALE_PATHS = [
 
 # this is necessary for the custom user model and must to be taken into account before any migration will occur. 
 AUTH_USER_MODEL = 'users.User'
-"""
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'myproj.middleware.CustomCorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'myproj.middleware.restriction.GuestRestrictionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "myproj.middleware.APIResponseMiddleware"
+    
+    
+    
     
 ]
+
+# Configuración CORS (para desarrollo)
+
 """
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173", 
+]
+"""
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = ['*']
+CORS_ALLOW_HEADERS = ['accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',  # ¡Asegúrate de incluir este!
+    'x-requested-with',]
+CORS_URLS_REGEX = r'^/.*$'
+CORS_EXPOSE_HEADERS = [
+    'x-csrftoken'  # Para que el cliente pueda leerlo
+]
+# Configuración REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ]
+}
+
 ROOT_URLCONF = 'myproj.urls'
 
 TEMPLATES = [
@@ -96,7 +135,7 @@ WSGI_APPLICATION = 'myproj.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': "inventario",
+        'NAME': "sigat",
         'USER': 'admin',
         'PASSWORD': 'Pa55w0rd',
         'HOST': '127.0.0.1',
@@ -144,22 +183,17 @@ USE_L10N = True
 
 USE_TZ = True
 
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',  
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
 
 # Configuración adicional para CSRF
 CSRF_USE_SESSIONS = False  # Usar cookies en lugar de sesión
 CSRF_COOKIE_HTTPONLY = False  # Permitir acceso desde JavaScript
 CSRF_COOKIE_SECURE = False  # True en producción con HTTPS
 CSRF_COOKIE_SAMESITE = 'Lax'  # Buen equilibrio entre seguridad y usabilidad
-
+CSRF_TRUSTED_ORIGINS = [
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+]
+#CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 # necessary to define a static folder inside the main application
 #STATIC_DIR = os.path.join(BASE_DIR, 'static')
 
