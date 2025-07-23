@@ -1,0 +1,122 @@
+/* Estilos para el sistema de pestañas */
+:root {
+    --primary-green: #2E7D32;
+    --primary-green-dark: #1B5E20;
+    --primary-black: #212121;
+    --primary-white: #FFFFFF;
+    --secondary-gray: #F5F5F5;
+    --accent-green: #4CAF50;
+    --glass-effect: rgba(255, 255, 255, 0.15);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* ===== ESTILOS BASE PARA PESTAÑAS ===== */
+.inventory-nav {
+    margin-bottom: var(--spacing-lg);
+}
+
+.inventory-tabs {
+    display: flex;
+    list-style: none;
+    gap: var(--spacing-md);
+    margin: 0;
+    padding: 0;
+}
+
+.inventory-tab {
+    position: relative;
+}
+
+/* Estado normal - Diseño minimalista */
+.inventory-tab-button {
+    color: var(--primary-black);
+    font-weight: 500;
+    padding: var(--spacing-sm) var(--spacing-md);
+    text-decoration: none;
+    display: block;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+/* Estado hover - Efectos completos */
+.inventory-tab-button:hover {
+    color: var(--primary-green-dark);
+    background-color: rgba(255, 255, 255, 0.15);
+    position: relative;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+}
+
+.inventory-tab-button:hover::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    border: 2px solid var(--primary-black);
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+/* Estado activo - Estilo distintivo pero sin efectos hover */
+.inventory-tab-button.active {
+    color: var(--primary-green-dark);
+    font-weight: 600;
+    background-color: rgba(0, 0, 0, 0);
+    border: 2px solid var(--primary-black);
+    transform: none;
+    box-shadow: none;
+    border-radius: 20px;
+}
+
+.inventory-tab-button.active:hover {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+/* Contenedor de contenido */
+.inventory-content {
+    background-color: var(--primary-white);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+    margin-top: var(--spacing-md);
+}
+
+.tab-pane {
+    display: none;
+    animation: fadeIn 0.4s ease;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* Efecto de carga */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .inventory-tabs {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+    
+    .inventory-tab-button {
+        width: 100%;
+        text-align: left;
+    }
+    
+    .inventory-tab-button:hover {
+        transform: translateX(2px);
+    }
+}
